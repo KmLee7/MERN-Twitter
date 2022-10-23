@@ -7,7 +7,7 @@
 var app = require("../app");
 const debug = require("debug");
 const mongoose = require("mongoose");
-const { mongoURI: db } = require("../config/key.js");
+const { mongoURI: db } = require("../config/keys.js");
 
 const serverLogger = debug("backend:server");
 const dbLogger = debug("backend:mongodb");

@@ -1,19 +1,36 @@
-var express = require("express");
+const express = require("express");
 
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
+const cookieParser = require("cookie-parser");
+const logger = require("morgan");
 
-var usersRouter = require("./routes/api/users");
-var tweetsRouter = require("./routes/api/tweets");
+const cors = require("cors");
+const csurf = require("csurf");
+const { isProduction } = require("./config/keys");
 
-var app = express();
+const usersRouter = require("./routes/api/users");
+const tweetsRouter = require("./routes/api/tweets");
+const csrfRouter = require("./routes/api/csrf");
+const app = express();
 
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
+if (!isProduction) {
+  app.use(cors());
+}
+app.use(
+  csurf({
+    cookie: {
+      secure: isProduction,
+      sameSite: isProduction && "Lax",
+      httpOnly: true,
+    },
+  })
+);
 app.use("/api/users", usersRouter);
 app.use("/api/tweets", tweetsRouter);
+app.use("/api/csrf", csrfRouter);
 
 module.exports = app;
