@@ -1,20 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
+const passport = require("passport");
 const mongoose = require("mongoose");
 const User = mongoose.model("User");
-const passport = require("passport");
 const { loginUser, restoreUser } = require("../../config/passport");
-const { isProduction } = require("../../config/keys");
+
 const validateRegisterInput = require("../../validations/register");
 const validateLoginInput = require("../../validations/login");
 
+const { isProduction } = require("../../config/keys");
 /* GET users listing. */
-router.get("/", function (req, res, next) {
-  res.json({
-    message: "GET /api/users",
-  });
-});
 router.get("/current", restoreUser, (req, res) => {
   if (!isProduction) {
     const csrfToken = req.csrfToken();
@@ -30,11 +26,14 @@ router.get("/current", restoreUser, (req, res) => {
 
 // POST /api/users/register
 router.post("/register", validateRegisterInput, async (req, res, next) => {
+  // Check to make sure no one has already registered with the proposed email or
+  // username.
   const user = await User.findOne({
     $or: [{ email: req.body.email }, { username: req.body.username }],
   });
 
   if (user) {
+    // Throw a 400 error if the email address and/or username already exists
     const err = new Error("Validation Error");
     err.statusCode = 400;
     const errors = {};
@@ -48,6 +47,7 @@ router.post("/register", validateRegisterInput, async (req, res, next) => {
     return next(err);
   }
 
+  // Otherwise create a new user
   const newUser = new User({
     username: req.body.username,
     email: req.body.email,
@@ -60,7 +60,7 @@ router.post("/register", validateRegisterInput, async (req, res, next) => {
       try {
         newUser.hashedPassword = hashedPassword;
         const user = await newUser.save();
-        return res.json(await loginUser(user));
+        return res.json(await loginUser(user)); // <-- THIS IS THE CHANGED LINE
       } catch (err) {
         next(err);
       }
@@ -68,6 +68,7 @@ router.post("/register", validateRegisterInput, async (req, res, next) => {
   });
 });
 
+// POST /api/users/login
 router.post("/login", validateLoginInput, async (req, res, next) => {
   passport.authenticate("local", async function (err, user) {
     if (err) return next(err);
@@ -77,7 +78,7 @@ router.post("/login", validateLoginInput, async (req, res, next) => {
       err.errors = { email: "Invalid credentials" };
       return next(err);
     }
-    return res.json(await loginUser(user));
+    return res.json(await loginUser(user)); // <-- THIS IS THE CHANGED LINE
   })(req, res, next);
 });
 
